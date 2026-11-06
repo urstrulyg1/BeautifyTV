@@ -160,7 +160,7 @@ public final class GlanceConfig {
             java.net.URI u = new java.net.URI(url);
             String scheme = u.getScheme();
             if (("mqtt".equalsIgnoreCase(scheme) || "mqtts".equalsIgnoreCase(scheme))
-                    && u.getHost() != null && u.getRawUserInfo() != null) return url;
+                    && u.getHost() != null) return url;
         } catch (java.net.URISyntaxException e) {
             // reported below
         }
