@@ -153,6 +153,17 @@ public class GlanceConfigTest {
         }
     }
 
+    @Test
+    public void acceptsMqttsUrl() {
+        GlanceConfig c = GlanceConfig.parse("{\"mqtt\":\"mqtts://u:p@broker:8883\",\"frigateUrl\":\"https://h:8971\"}");
+        assertTrue(c.mqttUrl.startsWith("mqtts://"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void mqttWithUnsupportedSchemeIsRejected() {
+        GlanceConfig.parse("{\"mqtt\":\"https://broker\",\"frigateUrl\":\"https://h:8971\"}");
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void mqttWithUnencodedCharactersIsRejected() {
         GlanceConfig.parse("{\"mqtt\":\"mqtt://u:p#w%@h:1883\",\"frigateUrl\":\"https://h:8971\"}");
