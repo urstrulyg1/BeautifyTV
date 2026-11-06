@@ -22,7 +22,7 @@ By default only Frigate **alerts** open a card, so what counts as worth interrup
 Frigate's review settings (for example a person in a required zone), and the settings screen narrows it
 further by camera and object.
 
-![The add-on's card in the launcher's grid](docs/card-in-grid.jpg)
+![Frigate Glance card](docs/card-in-grid.jpg)
 
 ## Permissions
 
@@ -34,8 +34,7 @@ further by camera and object.
 | Foreground service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`) | One background service keeps the MQTT connection open (a keep-alive every 30 s, no polling). |
 | Start at boot (`RECEIVE_BOOT_COMPLETED`) | To reconnect after a reboot. On TCL sets `install.sh` also allows the `APP_AUTO_START` app-op, without which TCL's firmware blocks it. |
 
-Two components only the ADB shell can use (they need `WRITE_SECURE_SETTINGS`, as the launcher's
-ThemeProvider): `ConfigProvider` takes `install.sh`'s `config.json`, so the file belongs to the add-on rather
+Two components intended for ADB-shell provisioning (they need `WRITE_SECURE_SETTINGS`): `ConfigProvider` takes `install.sh`'s `config.json`, so the file belongs to the add-on rather
 than the shell, and `TestCardReceiver` shows a test card over whatever is playing.
 
 ## Setup
@@ -43,17 +42,16 @@ than the shell, and `TestCardReceiver` shows a test card over whatever is playin
 1. Make a config file from [`config.example.json`](config.example.json) and keep it outside the repo
    (`backup/` is git-ignored). Use a Frigate user with the **viewer** role (Frigate user names take no `-`)
    and an MQTT user of its own rather than your main accounts.
-2. Install, from the repo root, with ADB on as for the launcher:
+2. Install, from the repo root, with ADB enabled:
 
    ```bash
    TV_HOST=<tv ip> addons/frigate-glance/install.sh backup/frigate-glance-config.json
    ```
 
-   It builds the add-on, installs it, grants the overlay and auto-start, pushes the config, turns on the key
-   service next to any the launcher uses, and prints `Config: read by the app`, `MQTT: ok` and `Frigate: ok`
+   It builds the add-on, installs it, grants the overlay and auto-start, pushes the config, enables the add-on's key
+   service, and prints `Config: read by the app`, `MQTT: ok` and `Frigate: ok`
    (or what went wrong), then shows a test card. The pushed file is deleted on the TV once the add-on has read it.
-3. Press Home and answer **Show card** when the launcher asks about the add-on's card. Open it for the
-   settings, in five sections: **Overview** (snooze, connection status), **Cameras** (which cameras, and
+3. Open **Frigate Glance** from the TV's app launcher and configure its settings, in five sections: **Overview** (snooze, connection status), **Cameras** (which cameras, and
    whether cameras added later count), **Alerts** (alerts only or detections too, which objects), **Card**
    (a test card for any camera, size, corner, how long it stays, live video, boxes) and **Remote** (each key
    picked by pressing it, hold to act, full screen). Settings changed there stay until the next config push.
@@ -62,9 +60,9 @@ than the shell, and `TestCardReceiver` shows a test card over whatever is playin
 
 | Key | Default | Meaning |
 |---|---|---|
-| `mqtt` | required | `mqtt://user:password@host:1883`; percent-encode `@ : /` in the user or password |
+| `mqtt` | required | `mqtt://user:password@host:1883` or `mqtts://user:password@host:8883` (TLS); percent-encode `@ : /` in the user or password |
 | `frigateUrl` | required | `https://host:8971` (authenticated port) or `http://host:5000` |
-| `frigateUser`, `frigatePassword` | empty | Frigate login; the certificate is trusted on first contact and pinned. Frigate makes a new self-signed one whenever its container is recreated (an update) unless `/etc/letsencrypt` is a volume; Overview then shows **New certificate** with both fingerprints, and OK on the Frigate row trusts it |
+| `frigateUser`, `frigatePassword` | empty | Frigate login; the certificate is trusted on first contact and pinned. Frigate makes a new self-signed one whenever its container is recreated (an update) unless `/etc/letsencrypt` is a volume. HTTPS hostname verification is enforced: use a DNS name or IP address that is present in the certificate's Subject Alternative Name. Overview then shows **New certificate** with both fingerprints, and OK on the Frigate row trusts it |
 | `topicPrefix` | `frigate` | Frigate's MQTT topic prefix |
 | `cameras` | `{}` (all) | camera name to the name shown on the card; listed cameras only |
 | `newCameras` | `false` | with `cameras` listed: cameras Frigate gains later open cards too |
@@ -98,7 +96,7 @@ go2rtc has no stream for it, so a replay card always shows snapshots.
 
 ## Tested on
 
-TCL 65Q650G (Android TV 11, Realtek RTD2851, 2 GB) with the reference launcher 2.6, Frigate 0.18.2 and the
+TCL 65Q650G (Android TV 11, Realtek RTD2851, 2 GB) with Frigate 0.18.2 and the
 Home Assistant Mosquitto broker. Checked with the real remote: Dismiss and Snooze over a playing YouTube
 video without it seeking, every other key passing through, the launcher's Netflix, YouTube, Prime, Settings
 and Input buttons unchanged, the card over Home, YouTube and the settings screen, reconnecting after a
