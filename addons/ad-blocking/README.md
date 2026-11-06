@@ -53,7 +53,7 @@ only the ADB shell can use it (it requires `WRITE_SECURE_SETTINGS`). No backgrou
 
 ## Build and install
 
-JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the launcher:
+JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the other add-ons:
 
 ```bash
 TV_HOST=<tv ip> addons/ad-blocking/install.sh [config.json]
