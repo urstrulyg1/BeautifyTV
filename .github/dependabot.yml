@@ -1,0 +1,73 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: gradle
+    directory: /addons/ad-blocking
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/airplay-status
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/bluetooth-connect
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/bluetooth-toggle
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/brightness
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/capacity-stats
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/digital-rain
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/flock
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /addons/frigate-glance
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
