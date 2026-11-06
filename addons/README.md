@@ -29,4 +29,4 @@ The add-ons are independent applications. Some include module-card metadata for 
 
 ## Wrapper layout
 
-The projects share the pinned Gradle 8.9 wrapper maintained in [ad-blocking](ad-blocking/gradle/wrapper/gradle-wrapper.properties). Each add-on's `gradlew` script delegates to that wrapper while setting the add-on as the Gradle project directory. This avoids copying wrapper JAR binaries into every add-on and keeps the wrapper version consistent.
+All projects are pinned to Gradle 8.9. Most add-ons carry the standard Gradle wrapper files; Capacity Stats, Flock, and Frigate Glance delegate to the shared wrapper maintained in [ad-blocking](ad-blocking/gradle/wrapper/gradle-wrapper.properties). All wrappers build the selected add-on as an independent Gradle project.
