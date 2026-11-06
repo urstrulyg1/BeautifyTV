@@ -1,13 +1,11 @@
 # Brightness
 
 Dims the whole picture below what the TV's own settings allow, and warms it at night, over every app, Live
-TV and the home screen. For the [Clean Your TV](../../README.md) launcher it declares a
-[module card](../../docs/modules.md): once you answer **Show card** its tile reads "Brightness" with an amber
-glow. On any other Android TV home it is an ordinary app.
+TV and the home screen. It includes module-card metadata for compatible third-party launchers; the launcher itself is maintained separately. On any other Android TV home it is an ordinary app.
 
 ![Brightness in night mode at 40 %, warm, over its own settings](screenshot.jpg)
 
-A remote button mapped to its quick bar (the launcher's `app_keys`:
+A compatible launcher can map a remote button to its quick bar (for example,
 `hold:191:io.github.maxhayim.brightness/.QuickActivity` puts it on a held Netflix button) opens a small bar at
 the bottom over whatever is playing: Left/Right step the brightness, OK closes it. `.NightToggleActivity` in its
 place switches night mode in one press, and the next press puts back what it replaced (the schedule, or off);
@@ -73,19 +71,16 @@ dimming off.
 
 ## Build and install
 
-JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the launcher. From the repo root, with ADB on:
+JDK 17 and Android SDK Platform 34 with build-tools 34.0.0. From the repository root:
 
 ```bash
 TV_HOST=<tv ip> addons/brightness/install.sh
 ```
 
-It builds the add-on, installs it, allows display over other apps (and TCL's auto-start), and opens it. Press
-Home: the launcher asks once whether to show the card. Change the answer later by holding OK on Settings, then
-Module cards. To build only: `cd addons/brightness && ./gradlew assembleRelease`; the JVM tests run with
+It builds the add-on, installs it, allows display over other apps (and TCL's auto-start), and opens it. Open Brightness from the TV app launcher; a compatible third-party launcher may also expose its module card. To build only: `cd addons/brightness && ./gradlew assembleRelease`; the JVM tests run with
 `./gradlew testReleaseUnitTest`.
 
-The release build is signed with the debug key so it installs over ADB like the launcher. Sign your own builds
-with your own key if you hand them out; the launcher pins its Show answer to the signing key.
+The release build is signed with the debug key for local sideloading. Sign your own release builds with your own key before distributing them.
 
 ## Limits
 
@@ -120,15 +115,14 @@ window (40 %, then down to 1 %, warm), each slider changing the layer at once, *
 broadcast removing the layer at once and On bringing it back, the TV picture option asking for and getting
 the slice permission and moving the TV's own backlight to 1 and back to 0 as the slider moved, the TV's day
 picture (backlight 100, contrast 50, brightness 50) put back by itself at 07:00 after a night at backlight 0,
-the card prompt, the card first in the grid and opening the app (on a home app that implements the module-card
-spec; not yet on this repo's launcher), and the layer back by itself after the app was updated. Memory: about 22 MB with the layer up.
+module-card discovery and opening the app on a compatible third-party home app, and the layer returning by itself after the app was updated. Memory: about 22 MB with the layer up.
 
 The JVM tests cover the levels, the colour arithmetic, the schedule (past midnight, edges, empty windows), the
 1 % floor, the fine steps and the clamping of stored values.
 
-Still to check on a TV running this repo's launcher (the test TV's home app has no module cards):
+Additional device validation to complete:
 
-1. The card on this repo's launcher.
+1. Module-card behavior on another compatible launcher.
 2. The start of the night without opening the app, and the day picture coming back when dimming is switched
    off.
 3. The layer over a streaming app playing video, Live TV and an HDMI input, with every remote key still
