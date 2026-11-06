@@ -9,6 +9,9 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +43,7 @@ public final class MqttClient {
 
     private final String host, user, password, clientId;
     private final int port;
+    private final boolean tls;
     private final List<String> topics;
     private final Listener listener;
     private final java.util.function.LongSupplier clock;
@@ -47,7 +51,7 @@ public final class MqttClient {
     private volatile Socket socket;
     private volatile boolean stopped;
 
-    /** url: mqtt://user:pass@host:port, user and password percent-encoded; port 1883 when left out. */
+    /** url: mqtt:// or mqtts://user:pass@host:port; credentials are percent-encoded. Defaults: 1883 / 8883. */
     public MqttClient(String url, String clientId, List<String> topics, Listener listener) {
         this(url, clientId, topics, listener, android.os.SystemClock::elapsedRealtime);
     }
@@ -56,8 +60,14 @@ public final class MqttClient {
     MqttClient(String url, String clientId, List<String> topics, Listener listener, java.util.function.LongSupplier clock) {
         this.clock = clock;
         URI u = URI.create(url);
+        String scheme = u.getScheme();
+        if (!"mqtt".equalsIgnoreCase(scheme) && !"mqtts".equalsIgnoreCase(scheme)) {
+            throw new IllegalArgumentException("MQTT URL must use mqtt:// or mqtts://");
+        }
         host = u.getHost();
-        port = u.getPort() > 0 ? u.getPort() : 1883;
+        if (host == null || host.isEmpty()) throw new IllegalArgumentException("MQTT URL must include a host");
+        tls = "mqtts".equalsIgnoreCase(scheme);
+        port = u.getPort() > 0 ? u.getPort() : (tls ? 8883 : 1883);
         String info = u.getRawUserInfo();
         if (info == null) {
             user = null;
@@ -75,10 +85,21 @@ public final class MqttClient {
     /** One session over a socket. Blocks until it ends; always ends with onDisconnected. */
     public void run(SocketFactory factory) {
         try {
-            Socket s = factory.createSocket();
-            socket = s;
+            Socket raw = tls ? new Socket() : factory.createSocket();
+            socket = raw;
             if (stopped) throw new IOException("stopped");
-            s.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
+            raw.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
+            Socket s = raw;
+            if (tls) {
+                SSLSocket secure = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                        .createSocket(raw, host, port, true);
+                SSLParameters parameters = secure.getSSLParameters();
+                parameters.setEndpointIdentificationAlgorithm("HTTPS");
+                secure.setSSLParameters(parameters);
+                socket = secure;
+                secure.startHandshake();
+                s = secure;
+            }
             s.setSoTimeout(PING_EVERY_MS);
             session(s.getInputStream(), s.getOutputStream());
         } catch (IOException | RuntimeException e) {
@@ -87,6 +108,10 @@ public final class MqttClient {
             closeQuietly();
         }
     }
+
+    boolean usesTls() { return tls; }
+
+    int port() { return port; }
 
     public void stop() {
         stopped = true;
