@@ -60,7 +60,7 @@ than the shell, and `TestCardReceiver` shows a test card over whatever is playin
 
 | Key | Default | Meaning |
 |---|---|---|
-| `mqtt` | required | `mqtt://user:password@host:1883` or `mqtts://user:password@host:8883` (TLS); percent-encode `@ : /` in the user or password |
+| `mqtt` | required | `mqtt://user:password@host:1883` or `mqtts://user:password@host:8883` (TLS); percent-encode `@ : /` in the user or password. For TLS, the broker certificate must chain to a CA trusted by Android and match the configured host name. |
 | `frigateUrl` | required | `https://host:8971` (authenticated port) or `http://host:5000` |
 | `frigateUser`, `frigatePassword` | empty | Frigate login; the certificate is trusted on first contact and pinned. Frigate makes a new self-signed one whenever its container is recreated (an update) unless `/etc/letsencrypt` is a volume. HTTPS hostname verification is enforced: use a DNS name or IP address that is present in the certificate's Subject Alternative Name. Overview then shows **New certificate** with both fingerprints, and OK on the Frigate row trusts it |
 | `topicPrefix` | `frigate` | Frigate's MQTT topic prefix |
