@@ -154,16 +154,18 @@ public final class GlanceConfig {
         return s.substring(0, end);
     }
 
-    /** mqtt://user:password@host:port with a host; the message never repeats the value (it holds a password). */
+    /** mqtt:// or mqtts:// URL with a host; never echo the value because it may contain a password. */
     private static String mqtt(String url) {
         try {
             java.net.URI u = new java.net.URI(url);
-            if ("mqtt".equalsIgnoreCase(u.getScheme()) && u.getHost() != null) return url;
+            String scheme = u.getScheme();
+            if (("mqtt".equalsIgnoreCase(scheme) || "mqtts".equalsIgnoreCase(scheme))
+                    && u.getHost() != null && u.getRawUserInfo() != null) return url;
         } catch (java.net.URISyntaxException e) {
             // reported below
         }
-        throw new IllegalArgumentException("\"mqtt\" must look like mqtt://user:password@host:1883, with characters"
-                + " other than letters and digits in the user or password percent-encoded");
+        throw new IllegalArgumentException("\"mqtt\" must look like mqtt://user:password@host:1883 or mqtts://user:password@host:8883,"
+                + " with special characters in credentials percent-encoded");
     }
 
     private static String required(JSONObject o, String k) {
