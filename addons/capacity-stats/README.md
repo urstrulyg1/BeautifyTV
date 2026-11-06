@@ -1,26 +1,22 @@
 # Capacity Stats
 
-Optional standalone Android TV module card, maintained by [lionlev21](https://github.com/lionlev21).
-Build with JDK 17 and Android SDK 34: `./gradlew testReleaseUnitTest lintRelease assembleRelease`.
-The small gradlew scripts reuse the repository’s pinned Gradle wrapper with this folder as the project;
-no wrapper JAR is copied into the add-on and no launcher source is included. Keep this folder inside
-the repository when building. Install the APK you build with ADB or your preferred installer.
-No binaries or prebuilt APKs are committed.
+A standalone Android TV app that displays available/total RAM and used/total storage. It is maintained by [lionlev21](https://github.com/lionlev21).
 
-The launcher discovers the static module card and asks whether to show it. Opening the card shows
-live readings in this app. Module spec 1 has static captions: it cannot show live counters on Home.
-No launcher changes are required. English and Hebrew UI, standard locale direction for other languages.
-Reads refresh every ten seconds only while this screen is resumed; no background service survives leaving it.
+## Build
 
-## Permissions
+Requires JDK 17 and Android SDK Platform 34.
 
-No permissions requested. No network, telemetry, ads or background service. Reads local
-/proc/meminfo and the data filesystem's capacity. Available/total and used/total RAM are labeled
-separately; “used” is total minus available, not process RSS. On old kernels, available is estimated
-as MemFree + Buffers + Cached, bounded by MemTotal. Missing/invalid values are omitted.
+```sh
+./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+The project uses the repository's shared Gradle 8.9 wrapper through its local `gradlew` scripts. No launcher source or wrapper JAR is required inside this add-on.
+
+## Permissions and privacy
+
+No permissions are requested. No network, telemetry, ads, or persistent background service. The app reads local `/proc/meminfo` and the data filesystem's capacity. “Used” RAM is total minus available, not process RSS. Missing or invalid readings are omitted.
 
 ## Validation
 
-Tested on a **Sony KD-50X85J running Android TV 12**.
-
-6 JVM tests, lintRelease and release build passed. On real hardware verified both RAM ratios, storage, Hebrew direction, module-card recognition and stopping the worker on Back.
+The upstream add-on README records testing on a Sony KD-50X85J running Android TV 12. Validate the app on your own device and Android version before relying on its readings.
