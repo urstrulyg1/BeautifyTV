@@ -176,8 +176,8 @@ public final class FrigateApi {
         if (c instanceof HttpsURLConnection) {
             HttpsURLConnection https = (HttpsURLConnection) c;
             https.setSSLSocketFactory(pinnedFactory());
-            // The pin is checked in the trust manager; the certificate rarely names the IP Frigate is reached on.
-            https.setHostnameVerifier((host, session) -> true);
+            // Certificate pinning does not replace host identity verification. Keep HttpsURLConnection's
+            // platform verifier so a pinned certificate must still match the configured host name or IP.
         }
         return c;
     }
