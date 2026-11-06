@@ -1,4 +1,4 @@
 #!/bin/sh
-# Reuse the repository's pinned Gradle distribution, but build this independent project.
+# Use the repository's single pinned Gradle wrapper while keeping this add-on an independent project.
 addon_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || exit 1
-exec sh "$addon_dir/../../launcher/gradlew" -p "$addon_dir" "$@"
+exec sh "$addon_dir/../ad-blocking/gradlew" -p "$addon_dir" "$@"
