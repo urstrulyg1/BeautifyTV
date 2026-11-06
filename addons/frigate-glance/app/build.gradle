@@ -40,5 +40,5 @@ dependencies {
     implementation 'androidx.media3:media3-ui:1.4.1'
     // Test only (never in the APK): plain JVM tests, src/test. org.json because android.jar's copy is a stub there.
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.json:json:20231013'
+    testImplementation 'org.json:json:20260814'
 }
