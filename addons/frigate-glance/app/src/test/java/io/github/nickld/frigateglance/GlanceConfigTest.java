@@ -159,6 +159,12 @@ public class GlanceConfigTest {
         assertTrue(c.mqttUrl.startsWith("mqtts://"));
     }
 
+    @Test
+    public void acceptsMqttsWithoutBrokerCredentials() {
+        GlanceConfig c = GlanceConfig.parse("{\"mqtt\":\"mqtts://broker\",\"frigateUrl\":\"https://h:8971\"}");
+        assertEquals("mqtts://broker", c.mqttUrl);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void mqttWithUnsupportedSchemeIsRejected() {
         GlanceConfig.parse("{\"mqtt\":\"https://broker\",\"frigateUrl\":\"https://h:8971\"}");
