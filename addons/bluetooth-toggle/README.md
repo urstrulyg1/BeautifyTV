@@ -1,8 +1,6 @@
 # Bluetooth Toggle
 
-A one-press Bluetooth switch for the TV. For the [Clean Your TV](../../README.md) launcher it declares a
-[module card](../../docs/modules.md), so once you answer **Show card** its tile reads "Bluetooth Toggle" with a
-blue glow; on any other Android TV home it is an ordinary app.
+A one-press Bluetooth switch for the TV. It includes module-card metadata for compatible third-party launchers; the launcher itself is maintained separately. On any other Android TV home it is an ordinary app.
 
 > **For Android 12 and older.** Android 13 and newer do not let apps switch Bluetooth. There this add-on can only
 > ask Android to turn it on and send you to Settings to turn it off, which the TV's own Bluetooth settings already
@@ -49,13 +47,12 @@ registered only while the panel is on screen.
 JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the launcher:
 
 ```bash
-cd addons/bluetooth-toggle && ./gradlew assembleRelease
-TV_HOST=<tv ip> ../../tools/venv/bin/python -I ../../tools/tv.py --push app/build/outputs/apk/release/app-release.apk /data/local/tmp/addon.apk
-TV_HOST=<tv ip> ../../tools/venv/bin/python -I ../../tools/tv.py 'pm install -r /data/local/tmp/addon.apk; rm -f /data/local/tmp/addon.apk'
+cd addons/bluetooth-toggle
+./gradlew --no-daemon assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-Press Home: the launcher asks once whether to show the card. Change the answer later by holding OK on
-Settings, then Module cards.
+Open Bluetooth Toggle from the TV app launcher. A compatible third-party launcher may also expose its module card.
 
 ## Limits
 
