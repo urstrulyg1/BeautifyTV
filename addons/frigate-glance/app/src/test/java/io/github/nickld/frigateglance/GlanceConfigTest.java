@@ -48,6 +48,17 @@ public class GlanceConfigTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
+    public void rejectsUnsupportedFrigateScheme() {
+        GlanceConfig.parse("{\"mqtt\":\"mqtt://broker\",\"frigateUrl\":\"ftp://host/path\"}");
+    }
+
+    @Test
+    public void acceptsHttpAndHttpsFrigateEndpoints() {
+        assertEquals("https://host:8971", GlanceConfig.parse("{\"mqtt\":\"mqtt://broker\",\"frigateUrl\":\"https://host:8971/\"}").frigateUrl);
+        assertEquals("http://host:5000", GlanceConfig.parse("{\"mqtt\":\"mqtt://broker\",\"frigateUrl\":\"http://host:5000\"}").frigateUrl);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
     public void invalidJsonIsRejected() {
         GlanceConfig.parse("not json");
     }
