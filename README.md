@@ -26,7 +26,7 @@ See the [add-ons index](addons/README.md) for the complete catalogue.
 - Android SDK Platform 34 and corresponding build tools
 - Internet access for Gradle and Android dependency resolution
 
-Each add-on is an independent Gradle project. The checked-in wrapper scripts share the pinned Gradle 8.9 wrapper from `addons/ad-blocking`, while passing the selected add-on directory as the project directory.
+Each add-on is an independent Gradle project pinned to Gradle 8.9. Most add-ons include their own standard wrapper files; Capacity Stats, Flock, and Frigate Glance delegate to the shared wrapper in `addons/ad-blocking` while passing their own project directory.
 
 ## Build and test one add-on
 
