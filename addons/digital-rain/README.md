@@ -1,57 +1,26 @@
 # Digital Rain
 
-A screensaver in the style of the film's digital rain: columns of mirrored half-width katakana and digits fall down
-a black screen, each with a bright head and a green trail that fades behind it, while a few glyphs in the trails
-change as they fall. It is drawn on the TV at about 20 frames a second, with no pictures or fonts to download.
-
-On cleanyourtv's Home it is also a module card, **Digital Rain**: press OK on it to start the rain at once, and
-Back to leave.
+A lightweight Android TV screensaver. Columns of mirrored half-width katakana and digits fall across a black screen, with a bright head and a fading green trail. The animation is drawn locally; no images, fonts, or network resources are downloaded.
 
 - Package: `io.github.dennisoleary.digitalrain`
 - Author: [@dennis-oleary](https://github.com/dennis-oleary)
-- Tested on: NVIDIA SHIELD Android TV Pro 2019 (Android TV 11)
+- Reported test device: NVIDIA SHIELD Android TV Pro 2019 (Android TV 11)
 
-## Permissions
+## Permissions and privacy
 
-None. No network access (no `INTERNET` permission): nothing leaves the TV. No background service: it runs only
-while the screensaver or the card's screen is showing.
+No permissions are requested. The app has no `INTERNET` permission and starts no persistent background service. Animation runs only while its screen is active.
 
 ## Build and install
 
-JDK 17 and Android SDK 34, as for the launcher. From the repo root:
+Requires JDK 17 and Android SDK Platform 34.
 
-```bash
-cd addons/digital-rain && ./gradlew assembleRelease && cd ../..
-TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py --push addons/digital-rain/app/build/outputs/apk/release/app-release.apk /data/local/tmp/addon.apk
-TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py 'pm install -r /data/local/tmp/addon.apk; rm -f /data/local/tmp/addon.apk'
+```sh
+./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-Press Home: the launcher asks once whether to show the card.
+The release APK is written to `app/build/outputs/apk/release/app-release.apk`. Open the app from the TV's app launcher. To use it as the system screensaver, select **Digital Rain** under the TV's Screen saver settings if the firmware lists it.
 
-## Use it as the screensaver
+## Customization
 
-Settings > Device Preferences > Screen saver > **Digital Rain** (the menu's name depends on the TV), or:
-
-```bash
-TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py 'settings put secure screensaver_components io.github.dennisoleary.digitalrain/.RainDream'
-```
-
-To see it without waiting, start the screensaver now:
-
-```bash
-TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py 'am start -n com.android.systemui/.Somnambulator'
-```
-
-## Change the look
-
-The constants at the top of `RainView.java`: `FRAME_NS` for the speed, `DROPS_PER_COLUMN` for how dense the rain
-is, `TRAIL` and `HEAD` for the colours. The glyph size is the `12` in `onSizeChanged` (in dp), and the fade colour
-in the constructor sets how long the trails stay.
-
-## Remove
-
-```bash
-TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py 'pm uninstall io.github.dennisoleary.digitalrain'
-```
-
-If it was the screensaver, pick another one in Settings.
+The animation constants in `app/src/main/java` control frame timing, drop density, and trail/head colors. Review the source before changing values to avoid excessive rendering work on lower-powered TVs.
