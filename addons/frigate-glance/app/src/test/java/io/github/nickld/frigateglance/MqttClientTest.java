@@ -140,6 +140,25 @@ public class MqttClientTest {
     }
 
     @Test
+    public void mqttsUsesTlsAndTheSecureDefaultPort() {
+        MqttClient client = new MqttClient("mqtts://broker", "t", TOPICS, new Recorder());
+        assertTrue(client.usesTls());
+        assertEquals(8883, client.port());
+    }
+
+    @Test
+    public void mqttKeepsThePlaintextDefaultPort() {
+        MqttClient client = new MqttClient("mqtt://broker", "t", TOPICS, new Recorder());
+        assertTrue(!client.usesTls());
+        assertEquals(1883, client.port());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void rejectsNonMqttSchemes() {
+        new MqttClient("http://broker", "t", TOPICS, new Recorder());
+    }
+
+    @Test
     public void backoffDoublesToSixtySeconds() {
         assertEquals(1000, MqttClient.backoffMs(0));
         assertEquals(8000, MqttClient.backoffMs(3));
