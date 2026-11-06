@@ -44,7 +44,7 @@ registered only while the panel is on screen.
 
 ## Build and install
 
-JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the launcher:
+JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the other add-ons:
 
 ```bash
 cd addons/bluetooth-toggle
