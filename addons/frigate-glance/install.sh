@@ -1,93 +1,113 @@
 #!/usr/bin/env bash
-# Build Frigate Glance, install it on the TV, push its config and check it reaches MQTT and Frigate.
-#   TV_HOST=<tv ip> addons/frigate-glance/install.sh <config.json>
-# The config holds passwords: keep it outside the repo (backup/ is git-ignored). This script never prints it.
+# Build Frigate Glance, install it on an Android TV, import its config, and verify both connections.
+# Usage: TV_HOST=<tv-ip> addons/frigate-glance/install.sh <config.json>
+# Requires: JDK 17, Android SDK, adb, and Python 3. Keep config.json outside the repository.
 set -euo pipefail
-CONFIG="${1:?usage: TV_HOST=<tv ip> $0 <config.json>}"
+
+CONFIG="${1:?usage: TV_HOST=<tv-ip> $0 <config.json>}"
 : "${TV_HOST:?set TV_HOST to the TV IP address}"
+command -v adb >/dev/null 2>&1 || { echo "ERROR: adb is required" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 is required for config validation" >&2; exit 1; }
+[ -f "$CONFIG" ] || { echo "ERROR: config file not found" >&2; exit 1; }
 CONFIG="$(cd "$(dirname "$CONFIG")" && pwd)/$(basename "$CONFIG")"
-# Git Bash on Windows: the venv's Python wants C:/... rather than /c/...
-if command -v cygpath >/dev/null 2>&1; then CONFIG="$(cygpath -m "$CONFIG")"; fi
-cd "$(dirname "$0")"
-TOOLS="$(cd ../../tools && pwd)"
-PY=$TOOLS/venv/bin/python
-[ -x "$PY" ] || PY=$TOOLS/venv/Scripts/python.exe
-export MSYS_NO_PATHCONV=1
-PKG=io.github.nickld.frigateglance
-# Script paths stay relative: with MSYS_NO_PATHCONV, Git Bash would hand Windows Python a /c/... path.
-tv() { "$PY" -I ../../tools/tv.py "$@"; }
 
-"$PY" -I - "$CONFIG" <<'EOF' || exit 1
+python3 - "$CONFIG" <<'PY'
 import json, sys
-try:
-    c = json.load(open(sys.argv[1], encoding="utf-8"))
-except Exception as e:
-    sys.exit(f"{sys.argv[1]} is not valid JSON: {e}")
-missing = [k for k in ("mqtt", "frigateUrl") if not str(c.get(k, "")).strip()]
-if missing:
-    sys.exit("config needs " + ", ".join(missing))
 from urllib.parse import urlsplit
+
 try:
-    u = urlsplit(c["mqtt"])
-    ok = u.scheme == "mqtt" and bool(u.hostname) and not any(ch in c["mqtt"] for ch in " #?")
+    with open(sys.argv[1], encoding="utf-8") as f:
+        config = json.load(f)
+except Exception:
+    sys.exit("ERROR: config file is not valid JSON")
+
+for key in ("mqtt", "frigateUrl"):
+    if not isinstance(config.get(key), str) or not config[key].strip():
+        sys.exit("ERROR: config needs " + key)
+
+try:
+    mqtt = urlsplit(config["mqtt"])
+    frigate = urlsplit(config["frigateUrl"])
+    mqtt_ok = mqtt.scheme in ("mqtt", "mqtts") and bool(mqtt.hostname)
+    frigate_ok = frigate.scheme in ("http", "https") and bool(frigate.hostname)
 except ValueError:
-    ok = False
-if not ok:   # the value holds a password: never print it
-    sys.exit('"mqtt" must look like mqtt://user:password@host:1883, special characters percent-encoded')
-EOF
+    mqtt_ok = frigate_ok = False
 
-[ -f local.properties ] || { [ -n "${ANDROID_HOME:-}" ] && echo "sdk.dir=${ANDROID_HOME//\\//}" > local.properties; } || true
+if not mqtt_ok:
+    sys.exit('ERROR: "mqtt" must use mqtt:// or mqtts:// and include a host')
+if not frigate_ok:
+    sys.exit('ERROR: "frigateUrl" must use http:// or https:// and include a host')
+PY
+
+PKG=io.github.nickld.frigateglance
+SVC="$PKG/.KeyService"
+if [[ "$TV_HOST" == *:* ]]; then
+    ADB_TARGET="$TV_HOST"
+else
+    ADB_TARGET="$TV_HOST:5555"
+fi
+adb connect "$ADB_TARGET" >/dev/null
+adb -s "$ADB_TARGET" get-state >/dev/null
+
 if [ -n "${JAVA_HOME:-}" ]; then export PATH="$JAVA_HOME/bin:$PATH"; fi
-./gradlew assembleRelease -q --console=plain
+cd "$(dirname "$0")"
+./gradlew --no-daemon assembleRelease -q --console=plain
+APK=app/build/outputs/apk/release/app-release.apk
+[ -f "$APK" ] || { echo "ERROR: release APK was not generated" >&2; exit 1; }
+adb -s "$ADB_TARGET" install -r "$APK"
 
-"$PY" -I ../../tools/b64push.py app/build/outputs/apk/release/app-release.apk /data/local/tmp/fg.apk
-OUT=$(tv 'pm install -r /data/local/tmp/fg.apk; rm -f /data/local/tmp/fg.apk')
-echo "$OUT"
-case "$OUT" in *Success*) ;; *) echo "ERROR: pm install failed" >&2; exit 1 ;; esac
+# Allow the overlay and, on TCL firmware, automatic start after reboot.
+adb -s "$ADB_TARGET" shell appops set "$PKG" SYSTEM_ALERT_WINDOW allow
+adb -s "$ADB_TARGET" shell cmd appops set "$PKG" APP_AUTO_START allow >/dev/null 2>&1 || true
 
-# Display over other apps (TCL's Settings hide it) and TCL's auto-start, so the service reconnects after a reboot.
-tv "appops set $PKG SYSTEM_ALERT_WINDOW allow; cmd appops set $PKG APP_AUTO_START allow 2>/dev/null; echo permissions granted"
+# Import through the app-owned provider. The external-files fallback supports older Android releases
+# where the content command is unavailable.
+adb -s "$ADB_TARGET" shell logcat -c
+adb -s "$ADB_TARGET" push "$CONFIG" /data/local/tmp/fg-config.json >/dev/null
+if ! adb -s "$ADB_TARGET" shell "content write --uri content://$PKG.config/config.json < /data/local/tmp/fg-config.json" >/dev/null 2>&1; then
+    adb -s "$ADB_TARGET" shell "mkdir -p /sdcard/Android/data/$PKG/files && cp /data/local/tmp/fg-config.json /sdcard/Android/data/$PKG/files/config.json"
+fi
+adb -s "$ADB_TARGET" shell rm -f /data/local/tmp/fg-config.json
 
-# The config goes in through the app's provider, so the file belongs to the app. On Android 14 the shell can cp
-# into Android/data as well, but that file is the shell's (uid 2000) and the app gets EACCES opening it (#3016),
-# as the launcher did with themes (#832). An earlier copy goes first: the provider cannot truncate a file the
-# shell owns. Android 8 and 9 have no `content write`, and a provider exception comes back as text, both with
-# exit status 0, so those messages count as failures, as in tools/theme.sh, and cp is the fallback. Only cp runs
-# mkdir: a folder the shell makes is one the provider then cannot write into.
-# The log is cleared first: through the provider the app imports the config, and logs it, at once.
-tv "logcat -c" >/dev/null
-STAGE=/data/local/tmp/fg-config.json
-tv --push "$CONFIG" "$STAGE" >/dev/null
-OUT=$(tv "d=/sdcard/Android/data/$PKG/files; rm -f \$d/config.json 2>/dev/null; if { o=\$(content write --uri content://$PKG.config/config.json < $STAGE 2>&1) && case \"\$o\" in *'Unsupported operation'*|*'Error while accessing provider'*) false ;; esac; } || { mkdir -p \$d 2>/dev/null && cp $STAGE \$d/config.json 2>/dev/null; }; then echo config pushed; else echo config not written; fi; rm -f $STAGE")
-echo "$OUT"
-case "$OUT" in *"config pushed"*) ;; *) echo "ERROR: the config could not be written on the TV" >&2; exit 1 ;; esac
+# Enable the key service without replacing any accessibility services already enabled by the user.
+SERVICES="$(adb -s "$ADB_TARGET" shell settings get secure enabled_accessibility_services | tr -d '\r')"
+case "$SERVICES" in
+    *"$SVC"*) ;;
+    null|"") SERVICES="$SVC" ;;
+    *) SERVICES="$SERVICES:$SVC" ;;
+esac
+adb -s "$ADB_TARGET" shell settings put secure enabled_accessibility_services "$SERVICES"
+adb -s "$ADB_TARGET" shell settings put secure accessibility_enabled 1
 
-# The key service, added to whatever accessibility services are already on (the launcher's, for one). A service
-# that was already listed is unbound by the reinstall and binds again only once the list changes.
-SVC=$PKG/.KeyService
-tv "s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$SVC*) settings put secure enabled_accessibility_services \"\$s\"; settings put secure accessibility_enabled 1; sleep 1; settings put secure enabled_accessibility_services ''; settings put secure accessibility_enabled 0; sleep 1; settings put secure enabled_accessibility_services \"\$s\" ;; null|'') settings put secure enabled_accessibility_services $SVC ;; *) settings put secure enabled_accessibility_services \"\$s:$SVC\" ;; esac; settings put secure accessibility_enabled 1; echo key service enabled"
+adb -s "$ADB_TARGET" shell am start -n "$PKG/.SettingsActivity" >/dev/null
 
-# Start it, then wait up to 20 s for the connection lines the service logs.
-tv "am start -n $PKG/.SettingsActivity >/dev/null" >/dev/null
 LOG=""
 for _ in $(seq 1 10); do
-  sleep 2
-  LOG=$(tv "logcat -d -s FrigateGlance:*" | tr -d '\r')
-  case "$LOG" in *"mqtt connected"*|*"mqtt error"*) case "$LOG" in *"frigate ok"*|*"frigate error"*) break ;; esac ;; esac
+    sleep 2
+    LOG="$(adb -s "$ADB_TARGET" logcat -d -s FrigateGlance:* | tr -d '\r')"
+    case "$LOG" in
+        *"mqtt connected"*) case "$LOG" in *"frigate ok"*|*"frigate error"*) break ;; esac ;;
+    esac
 done
-# Whether the app read the file: "config pushed" only means the shell wrote it. A rejected config's reason can
-# quote the config, passwords included, so only its first words are printed here.
-config=$(printf '%s\n' "$LOG" | grep -o 'config imported\|pushed config unreadable: .*\|pushed config rejected' | tail -n 1 || true)
-mqtt=$(printf '%s\n' "$LOG" | grep -o 'mqtt connected\|mqtt error: .*' | tail -n 1 || true)
-frigate=$(printf '%s\n' "$LOG" | grep -o 'frigate ok\|frigate error: .*' | tail -n 1 || true)
-case "$config" in
-  "config imported") echo "Config: read by the app" ;;
-  "pushed config rejected") echo "Config: rejected by the app (logcat -s FrigateGlance says why)" ;;
-  "") echo "Config: not read by the app within 20 s" ;;
-  *) echo "Config: ${config#pushed config }" ;;
+
+config_status="$(printf '%s\n' "$LOG" | grep -o 'config imported\|pushed config rejected\|pushed config unreadable' | tail -n 1 || true)"
+mqtt_status="$(printf '%s\n' "$LOG" | grep -o 'mqtt connected\|mqtt error: .*' | tail -n 1 || true)"
+frigate_status="$(printf '%s\n' "$LOG" | grep -o 'frigate ok\|frigate error: .*' | tail -n 1 || true)"
+
+case "$config_status" in
+    "config imported") echo "Config: read by the app" ;;
+    "pushed config rejected") echo "Config: rejected by the app; inspect device logcat for details" ;;
+    *) echo "Config: not confirmed; inspect device logcat" ;;
 esac
-case "$mqtt" in "mqtt connected") echo "MQTT: ok" ;; "") echo "MQTT: no answer within 20 s" ;; *) echo "MQTT: ${mqtt#mqtt error: }" ;; esac
-case "$frigate" in "frigate ok") echo "Frigate: ok" ;; "") echo "Frigate: no answer within 20 s" ;; *) echo "Frigate: ${frigate#frigate error: }" ;; esac
-[ "$config" = "config imported" ] && [ "$mqtt" = "mqtt connected" ] && [ "$frigate" = "frigate ok" ] || exit 1
-tv "am broadcast -n $PKG/.TestCardReceiver >/dev/null; echo test card shown"
-echo "Installed. A test card is on the TV now; real ones follow Frigate's alerts."
+case "$mqtt_status" in
+    "mqtt connected") echo "MQTT: connected" ;;
+    *) echo "MQTT: connection not confirmed; inspect device logcat" ;;
+esac
+case "$frigate_status" in
+    "frigate ok") echo "Frigate: connected" ;;
+    *) echo "Frigate: connection not confirmed; inspect device logcat" ;;
+esac
+
+[ "$config_status" = "config imported" ] && [ "$mqtt_status" = "mqtt connected" ] && [ "$frigate_status" = "frigate ok" ] || exit 1
+adb -s "$ADB_TARGET" shell am broadcast -n "$PKG/.TestCardReceiver" >/dev/null
+echo "Installed. Frigate Glance is configured and a test card was requested."
