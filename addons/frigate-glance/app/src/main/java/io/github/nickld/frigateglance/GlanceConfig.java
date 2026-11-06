@@ -50,7 +50,7 @@ public final class GlanceConfig {
     private GlanceConfig(JSONObject o) {
         source = o;
         mqttUrl = mqtt(required(o, "mqtt"));
-        frigateUrl = stripSlash(required(o, "frigateUrl"));
+        frigateUrl = frigate(required(o, "frigateUrl"));
         frigateUser = o.optString("frigateUser", "");
         frigatePassword = o.optString("frigatePassword", "");
         topicPrefix = o.optString("topicPrefix", "frigate").isEmpty() ? "frigate" : o.optString("topicPrefix", "frigate");
@@ -166,6 +166,19 @@ public final class GlanceConfig {
         }
         throw new IllegalArgumentException("\"mqtt\" must look like mqtt://user:password@host:1883 or mqtts://user:password@host:8883,"
                 + " with special characters in credentials percent-encoded");
+    }
+
+    /** Only HTTP(S) endpoints are valid; do not echo the URL because it may contain credentials. */
+    private static String frigate(String url) {
+        try {
+            java.net.URI u = new java.net.URI(url);
+            String scheme = u.getScheme();
+            if (("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                    && u.getHost() != null) return stripSlash(url);
+        } catch (java.net.URISyntaxException e) {
+            // reported below
+        }
+        throw new IllegalArgumentException("\"frigateUrl\" must use http:// or https:// and include a host");
     }
 
     private static String required(JSONObject o, String k) {
