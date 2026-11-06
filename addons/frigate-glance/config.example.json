@@ -1,5 +1,5 @@
 {
-  "mqtt": "mqtt://MQTT_USER:MQTT_PASSWORD@192.168.1.10:1883",
+  "mqtt": "mqtts://MQTT_USER:MQTT_PASSWORD@mqtt.example.local:8883",
   "frigateUrl": "https://192.168.1.11:8971",
   "frigateUser": "FRIGATE_VIEWER_USER",
   "frigatePassword": "FRIGATE_VIEWER_PASSWORD",
