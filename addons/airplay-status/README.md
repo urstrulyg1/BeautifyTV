@@ -33,7 +33,7 @@ background service, accounts, telemetry, ads or libraries.
 
 ## Build and install
 
-JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the launcher. From the repo root, with ADB on:
+JDK 17 and Android SDK platform 34 with build-tools 34.0.0, as for the other add-ons. From the repo root, with ADB on:
 
 ```bash
 TV_HOST=<tv ip> addons/airplay-status/install.sh
