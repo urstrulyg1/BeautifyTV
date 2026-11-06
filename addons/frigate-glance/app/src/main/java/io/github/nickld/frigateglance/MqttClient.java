@@ -89,6 +89,7 @@ public final class MqttClient {
             socket = raw;
             if (stopped) throw new IOException("stopped");
             raw.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
+            raw.setSoTimeout(CONNECT_TIMEOUT_MS);
             Socket s = raw;
             if (tls) {
                 SSLSocket secure = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
